@@ -3,6 +3,11 @@ import { ChatSession } from '../models/chatSessionSchema.js';
 import { ChatMessage } from '../models/chatMessageSchema.js';
 import { Canvas } from '../models/canvasSchema.js';
 import { ComfyWorkflow } from '../models/comfyWorkflowSchema.js';
+import { Knowledge } from '../models/knowledgeSchema.js';
+import { Template } from '../models/templateSchema.js';
+import { DeviceSession } from '../models/deviceSessionSchema.js';
+import { Billing } from '../models/billingSchema.js';
+import { Task } from '../models/taskSchema.js';
 import { MONGODB_URI } from '../constants.js';
 
 let isConnected = false;
@@ -217,6 +222,148 @@ export async function deleteComfyWorkflow(id) {
     await getDb();
 
     await ComfyWorkflow.deleteOne({ _id: id });
+}
+
+export async function createKnowledge(payload) {
+    await getDb();
+    const knowledge = await Knowledge.create(payload);
+    return knowledge.toObject();
+}
+
+export async function listKnowledge({ pageSize = 20, pageNumber = 1, search = '' } = {}) {
+    await getDb();
+
+    const safePageSize = Math.max(1, Math.min(Number(pageSize) || 20, 100));
+    const safePageNumber = Math.max(1, Number(pageNumber) || 1);
+    const trimmedSearch = String(search || '').trim();
+
+    const query = trimmedSearch
+        ? {
+            $or: [
+                { title: { $regex: trimmedSearch, $options: 'i' } },
+                { content: { $regex: trimmedSearch, $options: 'i' } },
+                { tags: { $regex: trimmedSearch, $options: 'i' } }
+            ]
+        }
+        : {};
+
+    const [total, data] = await Promise.all([
+        Knowledge.countDocuments(query),
+        Knowledge.find(query)
+            .sort({ updated_at: -1 })
+            .skip((safePageNumber - 1) * safePageSize)
+            .limit(safePageSize)
+            .lean()
+    ]);
+
+    return {
+        data,
+        total,
+        pageSize: safePageSize,
+        pageNumber: safePageNumber
+    };
+}
+
+export async function getKnowledgeById(id) {
+    await getDb();
+    return Knowledge.findById(id).lean();
+}
+
+export async function updateKnowledge(id, payload) {
+    await getDb();
+    return Knowledge.findByIdAndUpdate(id, { $set: payload }, { new: true }).lean();
+}
+
+export async function deleteKnowledge(id) {
+    await getDb();
+    return Knowledge.findByIdAndDelete(id).lean();
+}
+
+export async function createTemplate(payload) {
+    await getDb();
+    const template = await Template.create(payload);
+    return template.toObject();
+}
+
+export async function listTemplates() {
+    await getDb();
+    return Template.find().sort({ updated_at: -1 }).lean();
+}
+
+export async function getTemplateById(id) {
+    await getDb();
+    return Template.findById(id).lean();
+}
+
+export async function updateTemplate(id, payload) {
+    await getDb();
+    return Template.findByIdAndUpdate(id, { $set: payload }, { new: true }).lean();
+}
+
+export async function deleteTemplate(id) {
+    await getDb();
+    return Template.findByIdAndDelete(id).lean();
+}
+
+export async function createDeviceSession(payload) {
+    await getDb();
+    const session = await DeviceSession.create(payload);
+    return session.toObject();
+}
+
+export async function getDeviceSessionById(id) {
+    await getDb();
+    return DeviceSession.findById(id).lean();
+}
+
+export async function deleteDeviceSession(id) {
+    await getDb();
+    return DeviceSession.findByIdAndDelete(id).lean();
+}
+
+export async function getBalance(ownerId = 'default') {
+    await getDb();
+    const billing = await Billing.findOne({ owner_id: ownerId }).lean();
+    return {
+        balance: billing?.balance ?? 0,
+        currency: billing?.currency ?? 'credits'
+    };
+}
+
+export async function upsertBalance(ownerId = 'default', amount = 0, currency = 'credits') {
+    await getDb();
+    const billing = await Billing.findOneAndUpdate(
+        { owner_id: ownerId },
+        { $set: { balance: Number(amount) || 0, currency } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    return billing.toObject();
+}
+
+export async function createTask(payload) {
+    await getDb();
+    const task = await Task.create(payload);
+    return task.toObject();
+}
+
+export async function listTasks(filter = {}) {
+    await getDb();
+    return Task.find(filter).sort({ created_at: -1 }).lean();
+}
+
+export async function getTaskById(id) {
+    await getDb();
+    return Task.findById(id).lean();
+}
+
+export async function updateTask(id, payload) {
+    await getDb();
+    return Task.findByIdAndUpdate(id, { $set: payload }, { new: true }).lean();
+}
+
+export async function deleteTask(id) {
+    await getDb();
+    return Task.findByIdAndDelete(id).lean();
 }
 
 export async function getComfyWorkflow(id) {
