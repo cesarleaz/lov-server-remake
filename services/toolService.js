@@ -31,7 +31,8 @@ export async function initialize() {
 
   // Register provider/internal tools
   for (const [toolId, tool] of Object.entries(TOOL_MAPPING)) {
-    if (shouldRegisterTool(tool, config)) {
+    const providerConfig = config[tool.provider];
+    if (providerConfig && providerConfig.api_key) {
       tools.set(toolId, tool);
     }
   }

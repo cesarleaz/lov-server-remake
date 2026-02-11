@@ -5,7 +5,7 @@
 ### Root Router
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/list_models` | Lists all available LLM models from configured providers. |
+| GET | `/list_models` | Lists all available text models from configured providers using configured models or internal provider catalogs. |
 | GET | `/list_tools` | Lists all registered tools (excluding system tools). |
 | GET | `/list_chat_sessions` | Returns all chat sessions. |
 | GET | `/chat_session/:session_id` | Returns history for a specific session. |
@@ -34,10 +34,6 @@
 | GET | `/settings/proxy/status` | Returns the status of the proxy configuration. |
 | GET | `/settings/proxy` | Returns proxy-specific settings. |
 | POST | `/settings/proxy` | Updates proxy settings. |
-| POST | `/settings/comfyui/create_workflow` | Saves a new ComfyUI workflow to the database. |
-| GET | `/settings/comfyui/list_workflows` | Lists all saved ComfyUI workflows. |
-| DELETE | `/settings/comfyui/delete_workflow/:id` | Deletes a ComfyUI workflow. |
-| POST | `/settings/comfyui/proxy` | Proxies requests to a ComfyUI server. |
 | GET | `/settings/knowledge/enabled` | Returns the list of enabled knowledge bases. |
 | GET | `/settings/my_assets_dir_path` | Returns the path to the user's assets directory. |
 
