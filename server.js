@@ -21,6 +21,7 @@ import toolConfirmationRouter from './routes/toolConfirmationRouter.js';
 import sslRouter from './routes/sslRouter.js';
 import dataRouter from './routes/dataRouter.js';
 import v1Router from './routes/v1Router.js';
+import deviceRouter from './routes/deviceRouter.js';
 import { PORT as port, UI_DIST_DIR as uiDistDir } from './constants.js';
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api', toolConfirmationRouter);
 app.use('/api', sslRouter);
 app.use('/api', dataRouter);
 app.use('/api', v1Router);
+app.use('/api', deviceRouter);
 
 const uiAssetsDir = path.join(uiDistDir, 'assets');
 if (fs.existsSync(uiAssetsDir)) {
