@@ -15,9 +15,45 @@ const deviceSessionSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  code: {
+    type: String,
+    index: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'authorized', 'expired', 'revoked'],
+    default: 'pending',
+    index: true
+  },
   session_token: {
     type: String,
     default: null
+  },
+  refresh_token_hash: {
+    type: String,
+    default: null
+  },
+  refresh_token_jti: {
+    type: String,
+    default: null
+  },
+  code_expires_at: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  refresh_token_expires_at: {
+    type: Date,
+    default: null
+  },
+  authorized_at: {
+    type: Date,
+    default: null
+  },
+  revoked_at: {
+    type: Date,
+    default: null,
+    index: true
   },
   expires_at: {
     type: Date,
@@ -34,5 +70,7 @@ const deviceSessionSchema = new mongoose.Schema({
   },
   collection: 'device_sessions'
 });
+
+deviceSessionSchema.index({ code: 1, status: 1 });
 
 export const DeviceSession = mongoose.model('DeviceSession', deviceSessionSchema);

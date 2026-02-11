@@ -24,6 +24,7 @@ import billingRouter from './routes/billingRouter.js';
 import knowledgeRouter from './routes/knowledgeRouter.js';
 import templateRouter from './routes/templateRouter.js';
 import v1Router from './routes/v1Router.js';
+import deviceRouter from './routes/deviceRouter.js';
 import { PORT as port, UI_DIST_DIR as uiDistDir } from './constants.js';
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api', billingRouter);
 app.use('/api', knowledgeRouter);
 app.use('/api', templateRouter);
 app.use('/api/v1', v1Router);
+
 
 const uiAssetsDir = path.join(uiDistDir, 'assets');
 if (fs.existsSync(uiAssetsDir)) {
