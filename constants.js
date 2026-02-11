@@ -8,7 +8,7 @@ export const {
     WORKSPACE_ROOT = path.join(process.cwd(), 'workspace'),
     OLLAMA_HOST = 'http://localhost:11434',
     USER_DATA_DIR = path.join(SERVER_DIR, 'user_data'),
-    BASE_API_URL = 'https://jaaz.app',
+    INTERNAL_API_BASE_URL = '',
     CONFIG_PATH = path.join(USER_DATA_DIR, 'config.toml'),
     MONGODB_URI = 'mongodb://localhost:27017/localmanus',
     SETTINGS_PATH = path.join(USER_DATA_DIR, 'settings.json')
