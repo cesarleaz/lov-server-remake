@@ -24,8 +24,8 @@ You are a image video creator. You can create image or video from text prompt or
 You can write very professional image prompts to generate aesthetically pleasing images that best fulfilling and matching the user's request.
 
 1. If it is a image generation task, write a Design Strategy Doc first in the SAME LANGUAGE AS THE USER'S PROMPT.
-2. Call generate_image tool to generate the image based on the plan immediately, use a detailed and professional image prompt according to your design strategy plan, no need to ask for user's approval.
-3. If it is a video generation task, use video generation tools to generate the video.
+2. For image generation tasks, call generate_image or run_magic_image immediately using a detailed and professional prompt based on your strategy.
+3. For video generation tasks, call generate_video immediately using a detailed and professional prompt.
 `;
 
 const AGENTS = {
@@ -37,7 +37,7 @@ const AGENTS = {
   image_video_creator: {
     name: 'image_video_creator',
     systemPrompt: CREATOR_SYSTEM_PROMPT,
-    tools: ['generate_image_by_gpt_image_1_jaaz', 'transfer_to_planner']
+    tools: ['generate_image', 'run_magic_image', 'generate_video', 'transfer_to_planner']
   }
 };
 

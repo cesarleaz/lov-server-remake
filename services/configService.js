@@ -1,20 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import toml from '@iarna/toml';
-import { BASE_API_URL, CONFIG_PATH as configFilePath, USER_DATA_DIR } from '../constants.js';
+import { CONFIG_PATH as configFilePath, USER_DATA_DIR } from '../constants.js';
 
 export const FILES_DIR = path.join(USER_DATA_DIR, 'files');
 
 const DEFAULT_PROVIDERS_CONFIG = {
-  jaaz: {
+  google: {
     models: {
-      'gpt-4o': { type: 'text' },
-      'gpt-4o-mini': { type: 'text' },
-      'deepseek/deepseek-chat-v3-0324': { type: 'text' },
-      'anthropic/claude-sonnet-4': { type: 'text' },
-      'anthropic/claude-3.7-sonnet': { type: 'text' },
+      'gemini-2.5-pro': { type: 'text' },
+      'gemini-2.5-flash': { type: 'text' },
     },
-    url: BASE_API_URL.replace(/\/$/, '') + '/api/v1/',
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     api_key: '',
     max_tokens: 8192,
   },
@@ -31,8 +28,28 @@ const DEFAULT_PROVIDERS_CONFIG = {
 
 let appConfig = JSON.parse(JSON.stringify(DEFAULT_PROVIDERS_CONFIG));
 
-function getJaazUrl() {
-  return BASE_API_URL.replace(/\/$/, '') + '/api/v1/';
+function migrateLegacyConfig(config = {}) {
+  const migratedConfig = { ...config };
+
+  // Legacy provider: jaaz -> google
+  if (migratedConfig.jaaz) {
+    const legacyJaaz = migratedConfig.jaaz;
+
+    if (!migratedConfig.google) {
+      migratedConfig.google = {
+        ...DEFAULT_PROVIDERS_CONFIG.google,
+        api_key: legacyJaaz.api_key || '',
+      };
+
+      if (legacyJaaz.max_tokens !== undefined) {
+        migratedConfig.google.max_tokens = legacyJaaz.max_tokens;
+      }
+    }
+
+    delete migratedConfig.jaaz;
+  }
+
+  return migratedConfig;
 }
 
 export async function initialize() {
@@ -49,7 +66,8 @@ export async function initialize() {
     }
 
     const content = fs.readFileSync(configFilePath, 'utf8');
-    const config = toml.parse(content);
+    const parsedConfig = toml.parse(content);
+    const config = migrateLegacyConfig(parsedConfig);
 
     for (const [provider, providerConfig] of Object.entries(config)) {
       if (!DEFAULT_PROVIDERS_CONFIG[provider]) {
@@ -70,35 +88,26 @@ export async function initialize() {
       }
       appConfig[provider].models = providerModels;
     }
-
-    if (appConfig.jaaz) {
-      appConfig.jaaz.url = getJaazUrl();
-    }
   } catch (e) {
     console.error(`Error loading config: ${e.message}`);
   }
 }
 
 export function getConfig() {
-  if (appConfig.jaaz) {
-    appConfig.jaaz.url = getJaazUrl();
-  }
   return appConfig;
 }
 
 export async function updateConfig(data) {
   try {
-    if (data.jaaz) {
-      data.jaaz.url = getJaazUrl();
-    }
+    const migratedData = migrateLegacyConfig(data);
 
     const dir = path.dirname(configFilePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    fs.writeFileSync(configFilePath, toml.stringify(data));
-    appConfig = data;
+    fs.writeFileSync(configFilePath, toml.stringify(migratedData));
+    appConfig = migratedData;
 
     return {
       status: 'success',
