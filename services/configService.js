@@ -18,17 +18,6 @@ const DEFAULT_PROVIDERS_CONFIG = {
     api_key: '',
     max_tokens: 8192,
   },
-  comfyui: {
-    models: {},
-    url: 'http://127.0.0.1:8188',
-    api_key: '',
-  },
-  ollama: {
-    models: {},
-    url: 'http://localhost:11434',
-    api_key: '',
-    max_tokens: 8192,
-  },
   openai: {
     models: {
       'gpt-4o': { type: 'text' },

@@ -1,5 +1,4 @@
 import { getConfig } from './configService.js';
-import { getDb } from './dbService.js';
 import { writePlanTool } from '../tools/writePlan.js';
 import { generateImageByGptImage1Jaaz } from '../tools/generateImageJaaz.js';
 
@@ -20,7 +19,7 @@ export async function initialize() {
   // Logic to register tools based on config
   for (const [toolId, tool] of Object.entries(TOOL_MAPPING)) {
     const providerConfig = config[tool.provider];
-    if (providerConfig && (tool.provider === 'comfyui' || providerConfig.api_key)) {
+    if (providerConfig && providerConfig.api_key) {
       tools.set(toolId, tool);
     }
   }
