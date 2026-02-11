@@ -19,7 +19,10 @@ import imageRouter from './routes/imageRouter.js';
 import workspaceRouter from './routes/workspaceRouter.js';
 import toolConfirmationRouter from './routes/toolConfirmationRouter.js';
 import sslRouter from './routes/sslRouter.js';
-import dataRouter from './routes/dataRouter.js';
+import deviceRouter from './routes/deviceRouter.js';
+import billingRouter from './routes/billingRouter.js';
+import knowledgeRouter from './routes/knowledgeRouter.js';
+import templateRouter from './routes/templateRouter.js';
 import v1Router from './routes/v1Router.js';
 import deviceRouter from './routes/deviceRouter.js';
 import { PORT as port, UI_DIST_DIR as uiDistDir } from './constants.js';
@@ -39,9 +42,12 @@ app.use('/api', imageRouter);
 app.use('/api', workspaceRouter);
 app.use('/api', toolConfirmationRouter);
 app.use('/api', sslRouter);
-app.use('/api', dataRouter);
-app.use('/api', v1Router);
 app.use('/api', deviceRouter);
+app.use('/api', billingRouter);
+app.use('/api', knowledgeRouter);
+app.use('/api', templateRouter);
+app.use('/api/v1', v1Router);
+
 
 const uiAssetsDir = path.join(uiDistDir, 'assets');
 if (fs.existsSync(uiAssetsDir)) {

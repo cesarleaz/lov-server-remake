@@ -1,126 +1,107 @@
 import express from 'express';
-import { z, validateBody, validateParams } from '../utils/validation.js';
-import {
-  AuthError,
-  authorizeDeviceCode,
-  createPendingDeviceSession,
-  invalidateSession,
-  parseBearerToken,
-  pollDeviceCode,
-  refreshDeviceToken,
-  verifyAccessToken
-} from '../services/authService.js';
-import { requireAuthorization } from '../middleware/authMiddleware.js';
+import { nanoid } from 'nanoid';
+import { DeviceSession } from '../models/deviceSessionSchema.js';
+import { z, validateBody, validateQuery } from '../utils/validation.js';
 
 const router = express.Router();
 
-const createCodeBodySchema = z.object({
-  device_id: z.string().min(1),
-  metadata: z.any().optional().default({})
+const authBodySchema = z.object({
+  device_id: z.string().min(1).optional().default('unknown-device'),
+  user_id: z.string().min(1).optional(),
+  metadata: z.record(z.any()).optional().default({})
 });
 
-const authorizeCodeBodySchema = z.object({
-  code: z.string().min(1),
-  user_id: z.string().min(1)
-});
-
-const codeParamSchema = z.object({
+const pollQuerySchema = z.object({
   code: z.string().min(1)
 });
 
-const refreshTokenBodySchema = z.object({
-  refresh_token: z.string().min(1)
+const refreshQuerySchema = z.object({
+  code: z.string().min(1).optional()
 });
 
-const logoutBodySchema = z.object({
-  refresh_token: z.string().optional(),
-  session_id: z.string().optional()
-});
-
-function sendAuthError(res, error) {
-  if (error instanceof AuthError) {
-    return res.status(error.status).json({ detail: error.message, code: error.code });
-  }
-
-  console.error('Device auth error:', error);
-  return res.status(500).json({ detail: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' });
+function hasExpired(session) {
+  return session.expires_at && new Date(session.expires_at).getTime() <= Date.now();
 }
 
-router.post('/device/code', validateBody(createCodeBodySchema), async (req, res) => {
+router.post('/device/auth', validateBody(authBodySchema), async (req, res) => {
   try {
-    const session = await createPendingDeviceSession(req.body);
-    return res.json({
-      session_id: session._id,
-      code: session.code,
-      status: session.status,
-      expires_at: session.code_expires_at
+    const code = nanoid(12);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await DeviceSession.create({
+      _id: code,
+      device_id: req.body.device_id,
+      user_id: req.body.user_id ?? null,
+      session_token: req.body.user_id ? nanoid(32) : null,
+      expires_at: expiresAt,
+      metadata: req.body.metadata
+    });
+
+    return res.status(200).json({
+      status: 'pending',
+      code,
+      expires_at: expiresAt.toISOString()
     });
   } catch (error) {
-    return sendAuthError(res, error);
-  }
-});
-
-router.post('/device/authorize', validateBody(authorizeCodeBodySchema), async (req, res) => {
-  try {
-    const payload = await authorizeDeviceCode({
-      code: req.body.code,
-      userId: req.body.user_id
+    return res.status(500).json({
+      status: 'error',
+      detail: error.message || 'Failed to create device auth session'
     });
-    return res.json(payload);
-  } catch (error) {
-    return sendAuthError(res, error);
   }
 });
 
-router.get('/device/poll/:code', validateParams(codeParamSchema), async (req, res) => {
+router.get('/device/poll', validateQuery(pollQuerySchema), async (req, res) => {
   try {
-    const payload = await pollDeviceCode(req.params.code);
-    return res.json(payload);
-  } catch (error) {
-    return sendAuthError(res, error);
-  }
-});
+    const session = await DeviceSession.findById(req.query.code).lean();
 
-router.post('/device/refresh-token', validateBody(refreshTokenBodySchema), async (req, res) => {
-  try {
-    const payload = await refreshDeviceToken(req.body.refresh_token);
-    return res.json(payload);
-  } catch (error) {
-    return sendAuthError(res, error);
-  }
-});
-
-router.post('/device/logout', validateBody(logoutBodySchema), async (req, res) => {
-  try {
-    const headerToken = parseBearerToken(req.headers.authorization);
-    let sessionId = req.body.session_id || null;
-
-    if (!sessionId && headerToken) {
-      try {
-        sessionId = verifyAccessToken(headerToken).sid;
-      } catch {
-        sessionId = null;
-      }
+    if (!session) {
+      return res.status(404).json({ status: 'error', detail: 'Invalid code' });
     }
 
-    await invalidateSession({
-      sessionId,
-      refreshToken: req.body.refresh_token
-    });
+    if (hasExpired(session)) {
+      return res.status(200).json({ status: 'expired' });
+    }
 
-    return res.json({ success: true });
+    if (session.session_token) {
+      return res.status(200).json({
+        status: 'authorized',
+        token: session.session_token,
+        user_info: session.metadata?.user_info ?? {
+          user_id: session.user_id,
+          device_id: session.device_id
+        }
+      });
+    }
+
+    return res.status(200).json({ status: 'pending' });
   } catch (error) {
-    return sendAuthError(res, error);
+    return res.status(500).json({ status: 'error', detail: error.message || 'Failed to poll device status' });
   }
 });
 
-router.get('/device/me', requireAuthorization, (req, res) => {
-  return res.json({
-    user_id: req.auth.userId,
-    session_id: req.auth.sessionId,
-    device_id: req.auth.deviceId,
-    expires_at: req.auth.expiresAt
-  });
+router.get('/device/refresh-token', validateQuery(refreshQuerySchema), async (req, res) => {
+  try {
+    if (!req.query.code) {
+      return res.status(400).json({ detail: 'code query param is required' });
+    }
+
+    const session = await DeviceSession.findById(req.query.code);
+
+    if (!session) {
+      return res.status(404).json({ detail: 'Device session not found' });
+    }
+
+    if (hasExpired(session)) {
+      return res.status(410).json({ detail: 'Device session expired' });
+    }
+
+    session.session_token = nanoid(32);
+    await session.save();
+
+    return res.status(200).json({ new_token: session.session_token });
+  } catch (error) {
+    return res.status(500).json({ detail: error.message || 'Failed to refresh token' });
+  }
 });
 
 export default router;
