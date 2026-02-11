@@ -47,3 +47,13 @@
   - `connection`: Client connects.
   - `join`: Join a session-specific room.
   - `message`: (Outgoing) Streams agent responses, tool calls, and status updates.
+
+
+### V1 Task & Generation Router
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v1/image` | Creates an image generation task and returns `task_id` immediately. |
+| POST | `/v1/magic` | Creates a magic generation task and returns `task_id` immediately. |
+| POST | `/v1/video` | Creates a video generation task and returns `task_id` immediately. |
+| GET | `/v1/video/status/:task_id` | Returns status/progress for a video task (or any existing task id). |
+| GET | `/v1/task/search?task_id=...` | Searches tasks by a single id or comma-separated `task_ids`. |
