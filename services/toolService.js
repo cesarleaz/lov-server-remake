@@ -1,13 +1,25 @@
 import { getConfig } from './configService.js';
-import { getDb } from './dbService.js';
 import { writePlanTool } from '../tools/writePlan.js';
-import { generateImageByGptImage1Jaaz } from '../tools/generateImageJaaz.js';
+import { generateImageTool } from '../tools/generateImage.js';
+import { generateVideoTool } from '../tools/generateVideo.js';
+import { runMagicImageTool } from '../tools/runMagicImage.js';
 
 const tools = new Map();
 
 const TOOL_MAPPING = {
-  'generate_image_by_gpt_image_1_jaaz': generateImageByGptImage1Jaaz,
+  generate_image: generateImageTool,
+  generate_video: generateVideoTool,
+  run_magic_image: runMagicImageTool
 };
+
+function shouldRegisterTool(tool, config) {
+  if (tool.provider === 'internal' || tool.provider === 'system') {
+    return true;
+  }
+
+  const providerConfig = config[tool.provider];
+  return Boolean(providerConfig && (tool.provider === 'comfyui' || providerConfig.api_key));
+}
 
 export async function initialize() {
   tools.clear();
@@ -17,10 +29,9 @@ export async function initialize() {
 
   const config = getConfig();
 
-  // Logic to register tools based on config
+  // Register provider/internal tools
   for (const [toolId, tool] of Object.entries(TOOL_MAPPING)) {
-    const providerConfig = config[tool.provider];
-    if (providerConfig && (tool.provider === 'comfyui' || providerConfig.api_key)) {
+    if (shouldRegisterTool(tool, config)) {
       tools.set(toolId, tool);
     }
   }
