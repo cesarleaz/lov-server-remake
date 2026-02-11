@@ -1,8 +1,13 @@
 import express from 'express';
 import * as dbService from '../services/dbService.js';
 import { z, validateBody, validateParams, validateQuery } from '../utils/validation.js';
+import { requireAuthorization } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+router.use('/knowledge', requireAuthorization);
+router.use('/template', requireAuthorization);
+router.use('/billing', requireAuthorization);
 
 const knowledgeListQuery = z.object({
   pageSize: z.coerce.number().int().positive().optional().default(20),
@@ -26,7 +31,7 @@ const templateBodySchema = z.object({
 });
 
 const billingGetBalanceQuery = z.object({
-  ownerId: z.string().optional().default('default')
+  ownerId: z.string().optional()
 });
 
 router.get('/knowledge/list', validateQuery(knowledgeListQuery), async (req, res) => {
@@ -69,7 +74,7 @@ router.get('/template/:id', validateParams(idParamSchema), async (req, res) => {
 });
 
 router.get('/billing/getBalance', validateQuery(billingGetBalanceQuery), async (req, res) => {
-  const data = await dbService.getBalance(req.query.ownerId);
+  const data = await dbService.getBalance(req.query.ownerId || req.auth.userId || 'default');
   res.json(data);
 });
 
