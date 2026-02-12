@@ -5,16 +5,17 @@ import { z, validateBody, validateParams, validateQuery } from '../utils/validat
 const router = express.Router();
 
 const knowledgeListQuery = z.object({
-  pageSize: z.coerce.number().int().positive().optional().default(20),
+  pageSize: z.coerce.number().int().positive().optional().default(10),
   pageNumber: z.coerce.number().int().positive().optional().default(1),
   search: z.string().optional().default('')
 });
 
 const knowledgeBodySchema = z.object({
-  title: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional().default(''),
+  cover: z.string().optional().default(''),
+  is_public: z.boolean().optional().default(false),
   content: z.string().optional().default(''),
-  source: z.string().optional().nullable(),
-  tags: z.array(z.string()).optional().default([]),
   metadata: z.any().optional().default({})
 });
 
@@ -29,9 +30,9 @@ router.get('/knowledge/list', validateQuery(knowledgeListQuery), async (req, res
       data: {
         list: result.data,
         pagination: {
-          total_pages: totalPages,
-          page: result.pageNumber,
           page_size: result.pageSize,
+          page_number: result.pageNumber,
+          total_pages: totalPages,
           total: result.total
         }
       }
@@ -60,7 +61,7 @@ router.post('/knowledge/create', validateBody(knowledgeBodySchema), async (req, 
   }
 });
 
-router.post('/knowledge/:id/update', validateParams(idParamSchema), validateBody(knowledgeBodySchema.partial()), async (req, res) => {
+router.put('/knowledge/:id', validateParams(idParamSchema), validateBody(knowledgeBodySchema.partial()), async (req, res) => {
   try {
     const updated = await dbService.updateKnowledge(req.params.id, req.body);
     if (!updated) return res.status(404).json({ success: false, detail: 'Knowledge not found' });
@@ -70,7 +71,7 @@ router.post('/knowledge/:id/update', validateParams(idParamSchema), validateBody
   }
 });
 
-router.delete('/knowledge/:id/delete', validateParams(idParamSchema), async (req, res) => {
+router.delete('/knowledge/:id', validateParams(idParamSchema), async (req, res) => {
   try {
     const deleted = await dbService.deleteKnowledge(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, detail: 'Knowledge not found' });

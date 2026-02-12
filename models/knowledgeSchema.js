@@ -1,22 +1,26 @@
 import mongoose from 'mongoose';
 
 const knowledgeSchema = new mongoose.Schema({
-  title: {
+  name: {
     type: String,
     required: true,
     trim: true
   },
-  content: {
+  description: {
     type: String,
     default: ''
   },
-  source: {
+  cover: {
     type: String,
-    default: null
+    default: ''
   },
-  tags: {
-    type: [String],
-    default: []
+  is_public: {
+    type: Boolean,
+    default: false
+  },
+  content: {
+    type: String,
+    default: ''
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,
@@ -30,6 +34,6 @@ const knowledgeSchema = new mongoose.Schema({
   collection: 'knowledge'
 });
 
-knowledgeSchema.index({ title: 'text', content: 'text' });
+knowledgeSchema.index({ name: 'text', description: 'text', content: 'text' });
 
 export const Knowledge = mongoose.model('Knowledge', knowledgeSchema);

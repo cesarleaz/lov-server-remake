@@ -50,7 +50,7 @@ async function callLLM(agent, messages, config) {
     throw new Error(`Provider ${provider} is not configured`);
   }
 
-  const url = providerConfig.url.replace(/\/$/, '') + (provider === 'ollama' ? '/api/chat' : '/chat/completions');
+  const url = providerConfig.url.replace(/\/$/, '') + '/chat/completions';
 
   // Construct tools for the LLM
   const agentTools = agent.tools.map(toolId => {

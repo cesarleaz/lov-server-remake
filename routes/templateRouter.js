@@ -6,8 +6,15 @@ const router = express.Router();
 
 const templateBodySchema = z.object({
   name: z.string().min(1),
-  description: z.string().optional().nullable(),
-  canvas_payload: z.any(),
+  canvas_id: z.union([z.string(), z.number()]).optional().transform((v) => (v == null ? '' : String(v))),
+  session_id: z.union([z.string(), z.number()]).optional().transform((v) => (v == null ? '' : String(v))),
+  cover_image: z.string().optional().default(''),
+  message: z.any().optional().nullable(),
+  canvas_data: z.object({
+    elements: z.array(z.any()).optional().default([]),
+    appState: z.record(z.any()).optional().default({}),
+    files: z.record(z.any()).optional().default({})
+  }),
   metadata: z.any().optional().default({})
 });
 
@@ -35,13 +42,17 @@ router.get('/template/:id', validateParams(idParamSchema), async (req, res) => {
 router.post('/template/create', validateBody(templateBodySchema), async (req, res) => {
   try {
     const created = await dbService.createTemplate(req.body);
-    return res.status(201).json({ success: true, data: created });
+    return res.status(201).json({
+      success: true,
+      template_id: created._id,
+      share_url: `/template/${created._id}`
+    });
   } catch (error) {
     return res.status(500).json({ success: false, detail: error.message || 'Failed to create template' });
   }
 });
 
-router.post('/template/:id/update', validateParams(idParamSchema), validateBody(templateBodySchema.partial()), async (req, res) => {
+router.put('/template/:id', validateParams(idParamSchema), validateBody(templateBodySchema.partial()), async (req, res) => {
   try {
     const updated = await dbService.updateTemplate(req.params.id, req.body);
     if (!updated) return res.status(404).json({ success: false, detail: 'Template not found' });
@@ -51,7 +62,7 @@ router.post('/template/:id/update', validateParams(idParamSchema), validateBody(
   }
 });
 
-router.delete('/template/:id/delete', validateParams(idParamSchema), async (req, res) => {
+router.delete('/template/:id', validateParams(idParamSchema), async (req, res) => {
   try {
     const deleted = await dbService.deleteTemplate(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, detail: 'Template not found' });

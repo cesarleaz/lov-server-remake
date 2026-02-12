@@ -31,22 +31,22 @@ let appConfig = JSON.parse(JSON.stringify(DEFAULT_PROVIDERS_CONFIG));
 function migrateLegacyConfig(config = {}) {
   const migratedConfig = { ...config };
 
-  // Legacy provider: jaaz -> google
-  if (migratedConfig.jaaz) {
-    const legacyJaaz = migratedConfig.jaaz;
+  // Legacy provider migration -> google
+  if (migratedConfig.legacy_provider) {
+    const legacyProviderConfig = migratedConfig.legacy_provider;
 
     if (!migratedConfig.google) {
       migratedConfig.google = {
         ...DEFAULT_PROVIDERS_CONFIG.google,
-        api_key: legacyJaaz.api_key || '',
+        api_key: legacyProviderConfig.api_key || '',
       };
 
-      if (legacyJaaz.max_tokens !== undefined) {
-        migratedConfig.google.max_tokens = legacyJaaz.max_tokens;
+      if (legacyProviderConfig.max_tokens !== undefined) {
+        migratedConfig.google.max_tokens = legacyProviderConfig.max_tokens;
       }
     }
 
-    delete migratedConfig.jaaz;
+    delete migratedConfig.legacy_provider;
   }
 
   return migratedConfig;
