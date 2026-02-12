@@ -1,2 +1,2 @@
-// Deprecated shim kept for backward compatibility with older imports.
-export { generateImageTool as generateImageByGptImage1Jaaz } from './generateImage.js';
+// Backward-compatible re-export for legacy import paths.
+export { generateImageTool as generateImageToolLegacy } from './generateImage.js';

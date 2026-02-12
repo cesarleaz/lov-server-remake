@@ -24,7 +24,6 @@ import billingRouter from './routes/billingRouter.js';
 import knowledgeRouter from './routes/knowledgeRouter.js';
 import templateRouter from './routes/templateRouter.js';
 import v1Router from './routes/v1Router.js';
-import deviceRouter from './routes/deviceRouter.js';
 import { PORT as port, UI_DIST_DIR as uiDistDir } from './constants.js';
 
 const app = express();

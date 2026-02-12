@@ -6,7 +6,7 @@ import { listTools } from '../services/toolService.js';
 const router = express.Router();
 
 const ENABLED_MODELS_CATALOG = {
-  jaaz: ['gemini-2.5-pro', 'gemini-2.5-flash', 'nano-banana'],
+  google: ['gemini-2.5-pro', 'gemini-2.5-flash', 'nano-banana'],
 };
 
 router.get('/list_models', async (req, res) => {

@@ -18,7 +18,7 @@ function shouldRegisterTool(tool, config) {
   }
 
   const providerConfig = config[tool.provider];
-  return Boolean(providerConfig && (tool.provider === 'comfyui' || providerConfig.api_key));
+  return Boolean(providerConfig && providerConfig.api_key);
 }
 
 export async function initialize() {
@@ -31,8 +31,7 @@ export async function initialize() {
 
   // Register provider/internal tools
   for (const [toolId, tool] of Object.entries(TOOL_MAPPING)) {
-    const providerConfig = config[tool.provider];
-    if (providerConfig && providerConfig.api_key) {
+    if (shouldRegisterTool(tool, config)) {
       tools.set(toolId, tool);
     }
   }

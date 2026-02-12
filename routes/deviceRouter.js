@@ -1,13 +1,20 @@
 import express from 'express';
-import { nanoid } from 'nanoid';
-import { DeviceSession } from '../models/deviceSessionSchema.js';
+import {
+  AuthError,
+  authorizeDeviceCode,
+  createPendingDeviceSession,
+  invalidateSession,
+  parseBearerToken,
+  pollDeviceCode,
+  refreshAccessTokenFromAccessToken,
+  verifyAccessToken
+} from '../services/authService.js';
 import { z, validateBody, validateQuery } from '../utils/validation.js';
 
 const router = express.Router();
 
 const authBodySchema = z.object({
   device_id: z.string().min(1).optional().default('unknown-device'),
-  user_id: z.string().min(1).optional(),
   metadata: z.record(z.any()).optional().default({})
 });
 
@@ -15,92 +22,114 @@ const pollQuerySchema = z.object({
   code: z.string().min(1)
 });
 
-const refreshQuerySchema = z.object({
-  code: z.string().min(1).optional()
-});
+function sendAuthError(res, error) {
+  if (error instanceof AuthError) {
+    return res.status(error.status || 401).json({
+      status: 'error',
+      message: error.message,
+      code: error.code || 'AUTH_ERROR'
+    });
+  }
 
-function hasExpired(session) {
-  return session.expires_at && new Date(session.expires_at).getTime() <= Date.now();
+  return res.status(500).json({
+    status: 'error',
+    message: error?.message || 'Authentication service error',
+    code: 'INTERNAL_ERROR'
+  });
 }
 
 router.post('/device/auth', validateBody(authBodySchema), async (req, res) => {
   try {
-    const code = nanoid(12);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-    await DeviceSession.create({
-      _id: code,
-      device_id: req.body.device_id,
-      user_id: req.body.user_id ?? null,
-      session_token: req.body.user_id ? nanoid(32) : null,
-      expires_at: expiresAt,
+    const session = await createPendingDeviceSession({
+      deviceId: req.body.device_id,
       metadata: req.body.metadata
     });
 
     return res.status(200).json({
       status: 'pending',
-      code,
-      expires_at: expiresAt.toISOString()
+      code: session.code,
+      expires_at: session.code_expires_at
     });
   } catch (error) {
-    return res.status(500).json({
-      status: 'error',
-      detail: error.message || 'Failed to create device auth session'
-    });
+    return sendAuthError(res, error);
   }
 });
 
 router.get('/device/poll', validateQuery(pollQuerySchema), async (req, res) => {
   try {
-    const session = await DeviceSession.findById(req.query.code).lean();
+    let pollResult = await pollDeviceCode(req.query.code);
 
-    if (!session) {
-      return res.status(404).json({ status: 'error', detail: 'Invalid code' });
+    // Internal backend flow: auto-authorize local user after first poll.
+    if (pollResult.status === 'pending') {
+      await authorizeDeviceCode({
+        code: req.query.code,
+        userId: 'local-user'
+      });
+      pollResult = await pollDeviceCode(req.query.code);
     }
 
-    if (hasExpired(session)) {
-      return res.status(200).json({ status: 'expired' });
-    }
-
-    if (session.session_token) {
+    if (pollResult.status === 'authorized') {
       return res.status(200).json({
         status: 'authorized',
-        token: session.session_token,
-        user_info: session.metadata?.user_info ?? {
-          user_id: session.user_id,
-          device_id: session.device_id
+        token: pollResult.access_token,
+        user_info: {
+          id: pollResult.user_id,
+          username: pollResult.user_id,
+          image_url: ''
         }
       });
     }
 
+    if (pollResult.status === 'expired') {
+      return res.status(200).json({ status: 'expired' });
+    }
+
+    if (pollResult.status === 'revoked') {
+      return res.status(200).json({ status: 'error', message: 'Session revoked' });
+    }
+
     return res.status(200).json({ status: 'pending' });
   } catch (error) {
-    return res.status(500).json({ status: 'error', detail: error.message || 'Failed to poll device status' });
+    return sendAuthError(res, error);
   }
 });
 
-router.get('/device/refresh-token', validateQuery(refreshQuerySchema), async (req, res) => {
+router.get('/device/refresh-token', async (req, res) => {
   try {
-    if (!req.query.code) {
-      return res.status(400).json({ detail: 'code query param is required' });
+    const accessToken = parseBearerToken(req.headers.authorization);
+
+    if (!accessToken) {
+      return res.status(401).json({ detail: 'Authorization token missing', code: 'TOKEN_MISSING' });
     }
 
-    const session = await DeviceSession.findById(req.query.code);
-
-    if (!session) {
-      return res.status(404).json({ detail: 'Device session not found' });
-    }
-
-    if (hasExpired(session)) {
-      return res.status(410).json({ detail: 'Device session expired' });
-    }
-
-    session.session_token = nanoid(32);
-    await session.save();
-
-    return res.status(200).json({ new_token: session.session_token });
+    const tokenPair = await refreshAccessTokenFromAccessToken(accessToken);
+    return res.status(200).json({ new_token: tokenPair.access_token });
   } catch (error) {
-    return res.status(500).json({ detail: error.message || 'Failed to refresh token' });
+    if (error instanceof AuthError && error.code === 'TOKEN_EXPIRED') {
+      return res.status(401).json({ detail: error.message, code: error.code });
+    }
+
+    return sendAuthError(res, error);
+  }
+});
+
+router.post('/device/logout', async (req, res) => {
+  try {
+    const accessToken = parseBearerToken(req.headers.authorization);
+
+    if (!accessToken) {
+      return res.status(401).json({ detail: 'Authorization token missing', code: 'TOKEN_MISSING' });
+    }
+
+    const payload = verifyAccessToken(accessToken);
+    await invalidateSession({ sessionId: payload.sid });
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    if (error instanceof AuthError && error.code === 'SESSION_NOT_FOUND') {
+      return res.status(200).json({ success: true });
+    }
+
+    return sendAuthError(res, error);
   }
 });
 

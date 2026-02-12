@@ -4,8 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import { FILES_DIR } from '../services/configService.js';
-import { fetchWithTimeout } from '../utils/httpUtils.js';
-import { z, validateBody, validateParams } from '../utils/validation.js';
+import { z, validateParams } from '../utils/validation.js';
 import { PORT } from '../constants.js';
 
 const router = express.Router();
@@ -16,7 +15,6 @@ if (!fs.existsSync(FILES_DIR)) {
 }
 
 const fileParamSchema = z.object({ file_id: z.string().min(1) });
-const comfyBodySchema = z.object({ url: z.string().url() });
 
 function getImageDimensions(buffer) {
   // PNG
@@ -70,19 +68,6 @@ router.get('/file/:file_id', validateParams(fileParamSchema), async (req, res) =
     return res.status(404).json({ detail: 'File not found' });
   }
   return res.sendFile(path.resolve(filePath));
-});
-
-router.post('/comfyui/object_info', validateBody(comfyBodySchema), async (req, res) => {
-  try {
-    const url = req.body.url.replace(/\/$/, '');
-    const response = await fetchWithTimeout(`${url}/api/object_info`, { timeout: 10000 });
-    if (!response.ok) {
-      return res.status(response.status).json({ detail: `ComfyUI server returned status ${response.status}` });
-    }
-    return res.json(await response.json());
-  } catch (e) {
-    return res.status(503).json({ detail: `Failed to connect to ComfyUI: ${e.message}` });
-  }
 });
 
 export default router;

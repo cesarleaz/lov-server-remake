@@ -293,6 +293,44 @@ export async function refreshDeviceToken(refreshToken) {
   };
 }
 
+
+export async function refreshAccessTokenFromAccessToken(accessToken) {
+  const payload = verifyAccessToken(accessToken);
+
+  const session = await DeviceSession.findById(payload.sid);
+  if (!session) {
+    throw new AuthError('Session not found', { status: 404, code: 'SESSION_NOT_FOUND' });
+  }
+
+  if (session.status !== 'authorized') {
+    throw new AuthError('Session is not authorized', { status: 401, code: 'SESSION_NOT_AUTHORIZED' });
+  }
+
+  if (session.revoked_at) {
+    throw new AuthError('Session revoked', { status: 401, code: 'SESSION_REVOKED' });
+  }
+
+  if (!session.refresh_token_expires_at || session.refresh_token_expires_at <= new Date()) {
+    throw new AuthError('Token expired', { status: 401, code: 'TOKEN_EXPIRED' });
+  }
+
+  const tokenPair = buildTokenPair(session, { userId: session.user_id || payload.sub || 'local-user' });
+
+  session.session_token = tokenPair.accessToken;
+  session.refresh_token_jti = tokenPair.refreshJti;
+  session.refresh_token_hash = hashToken(tokenPair.refreshToken);
+  session.refresh_token_expires_at = tokenPair.refreshExp;
+  session.expires_at = tokenPair.refreshExp;
+  await session.save();
+
+  return {
+    access_token: tokenPair.accessToken,
+    refresh_token: tokenPair.refreshToken,
+    expires_at: tokenPair.accessExp,
+    refresh_expires_at: tokenPair.refreshExp
+  };
+}
+
 export async function invalidateSession({ sessionId, refreshToken } = {}) {
   let resolvedSessionId = sessionId;
 

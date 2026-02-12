@@ -240,9 +240,9 @@ export async function listKnowledge({ pageSize = 20, pageNumber = 1, search = ''
     const query = trimmedSearch
         ? {
             $or: [
-                { title: { $regex: trimmedSearch, $options: 'i' } },
-                { content: { $regex: trimmedSearch, $options: 'i' } },
-                { tags: { $regex: trimmedSearch, $options: 'i' } }
+                { name: { $regex: trimmedSearch, $options: 'i' } },
+                { description: { $regex: trimmedSearch, $options: 'i' } },
+                { content: { $regex: trimmedSearch, $options: 'i' } }
             ]
         }
         : {};
