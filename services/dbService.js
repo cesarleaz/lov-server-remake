@@ -1,39 +1,9 @@
-import mongoose from 'mongoose';
 import { ChatSession } from '../models/chatSessionSchema.js';
 import { ChatMessage } from '../models/chatMessageSchema.js';
 import { Canvas } from '../models/canvasSchema.js';
 import { ComfyWorkflow } from '../models/comfyWorkflowSchema.js';
-import { MONGODB_URI } from '../constants.js';
-
-let isConnected = false;
-
-export async function initDb() {
-    if (isConnected) {
-        console.log('✅ Using existing MongoDB connection');
-        return mongoose.connection;
-    }
-
-    try {
-        await mongoose.connect(MONGODB_URI);
-        isConnected = true;
-        console.log('✅ MongoDB connected successfully');
-        return mongoose.connection;
-    } catch (error) {
-        console.error('❌ MongoDB connection error:', error);
-        throw error;
-    }
-}
-
-export async function getDb() {
-    if (!isConnected) {
-        await initDb();
-    }
-    return mongoose.connection;
-}
 
 export async function createChatSession(id, model, provider, canvasId, title = '') {
-    await getDb();
-
     const session = new ChatSession({
         _id: id,
         model,
@@ -46,8 +16,6 @@ export async function createChatSession(id, model, provider, canvasId, title = '
 }
 
 export async function createMessage(sessionId, role, message) {
-    await getDb();
-
     const chatMessage = new ChatMessage({
         session_id: sessionId,
         role,
@@ -58,8 +26,6 @@ export async function createMessage(sessionId, role, message) {
 }
 
 export async function getChatHistory(sessionId) {
-    await getDb();
-
     const messages = await ChatMessage
         .find({ session_id: sessionId })
         .sort({ _id: 1 })
@@ -75,8 +41,6 @@ export async function getChatHistory(sessionId) {
 }
 
 export async function listSessions(canvasId = null) {
-    await getDb();
-
     const query = canvasId ? { canvas_id: canvasId } : {};
 
     const sessions = await ChatSession
@@ -96,19 +60,15 @@ export async function listSessions(canvasId = null) {
     }));
 }
 
-export async function createCanvas(id, name) {
-    await getDb();
-
-    const canvas = new Canvas({
-        _id: id,
-        name
-    });
+export async function createCanvas() {
+    const canvas = new Canvas();
 
     await canvas.save();
+
+    return { canvasId: canvas._id.toString() }
 }
 
 export async function listCanvases() {
-    await getDb();
 
     const canvases = await Canvas
         .find()
@@ -128,8 +88,6 @@ export async function listCanvases() {
 }
 
 export async function saveCanvasData(id, data, thumbnail = null) {
-    await getDb();
-
     const updateData = {
         data,
         updated_at: new Date()
@@ -146,8 +104,6 @@ export async function saveCanvasData(id, data, thumbnail = null) {
 }
 
 export async function getCanvasData(id) {
-    await getDb();
-
     const canvas = await Canvas
         .findById(id)
         .select('data name')
@@ -165,14 +121,10 @@ export async function getCanvasData(id) {
 }
 
 export async function deleteCanvas(id) {
-    await getDb();
-
     await Canvas.deleteOne({ _id: id });
 }
 
 export async function renameCanvas(id, name) {
-    await getDb();
-
     await Canvas.updateOne(
         { _id: id },
         { $set: { name, updated_at: new Date() } }
@@ -180,8 +132,6 @@ export async function renameCanvas(id, name) {
 }
 
 export async function createComfyWorkflow(name, apiJson, description, inputs, outputs = null) {
-    await getDb();
-
     const workflow = new ComfyWorkflow({
         name,
         api_json: apiJson,
@@ -194,8 +144,6 @@ export async function createComfyWorkflow(name, apiJson, description, inputs, ou
 }
 
 export async function listComfyWorkflows() {
-    await getDb();
-
     const workflows = await ComfyWorkflow
         .find()
         .select('_id name description api_json inputs outputs')
@@ -214,14 +162,10 @@ export async function listComfyWorkflows() {
 }
 
 export async function deleteComfyWorkflow(id) {
-    await getDb();
-
     await ComfyWorkflow.deleteOne({ _id: id });
 }
 
 export async function getComfyWorkflow(id) {
-    await getDb();
-
     const workflow = await ComfyWorkflow
         .findById(id)
         .select('api_json')

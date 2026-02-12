@@ -1,7 +1,5 @@
-import { initDb } from '../services/dbService.js'
+import '../lib/db.js'
 import { Canvas } from '../models/canvasSchema.js'
-
-await initDb();
 
 // Crea el canvas por defecto si no existe
 const canvas = await Canvas.findOne({ _id: "default" });

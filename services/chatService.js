@@ -14,12 +14,14 @@ function getLastAssistantMessage(messages) {
 async function handleTask(data, taskType = 'chat') {
   const { messages, session_id, canvas_id, text_model, tool_list, system_prompt } = data;
 
+  // console.log({ data: JSON.stringify(data, null, 2) })
+
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new Error('messages is required');
   }
 
   if (messages.length === 1) {
-    const prompt = messages[0].content || '';
+    const prompt = messages[0].content?.text || '';
     await createChatSession(session_id, text_model.model, text_model.provider, canvas_id, prompt.substring(0, 200));
   }
 

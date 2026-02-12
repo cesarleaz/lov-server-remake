@@ -1,6 +1,7 @@
-import { getConfig } from './configService.js';
+import { DEFAULT_PROVIDERS_CONFIG } from './configService.js';
 import { getTool } from './toolService.js';
 import { fetchWithTimeout } from '../utils/httpUtils.js';
+import { VERTEX_API_KEY } from '../constants.js';
 
 const PLANNER_SYSTEM_PROMPT = `
 You are a design planning writing agent. Answer and write plan in the SAME LANGUAGE as the user's prompt. You should do:
@@ -37,20 +38,21 @@ const AGENTS = {
   image_video_creator: {
     name: 'image_video_creator',
     systemPrompt: CREATOR_SYSTEM_PROMPT,
-    tools: ['generate_image_by_gpt_image_1_jaaz', 'transfer_to_planner']
+    tools: ['generate_image', 'transfer_to_planner']
   }
 };
 
 async function callLLM(agent, messages, config) {
-  const provider = config.text_model.provider;
-  const model = config.text_model.model;
-  const providerConfig = getConfig()[provider];
+  // const provider = config.text_model.provider;
+  // const model = config.text_model.model;
 
-  if (!providerConfig || !providerConfig.api_key) {
-    throw new Error(`Provider ${provider} is not configured`);
-  }
+  // const providerConfig = DEFAULT_PROVIDERS_CONFIG[provider];
 
-  const url = providerConfig.url.replace(/\/$/, '') + (provider === 'ollama' ? '/api/chat' : '/chat/completions');
+  // if (!providerConfig) {
+  //   throw new Error(`Provider ${provider} is not configured`);
+  // }
+
+  // const url = providerConfig.url.replace(/\/$/, '') + (provider === 'ollama' ? '/api/chat' : '/chat/completions');
 
   // Construct tools for the LLM
   const agentTools = agent.tools.map(toolId => {
@@ -88,16 +90,16 @@ async function callLLM(agent, messages, config) {
   ];
 
   const body = {
-    model: model,
+    model: 'gemini-3-flash-preview',
     messages: llmMessages,
     tools: agentTools.length > 0 ? agentTools : undefined,
     tool_choice: agentTools.length > 0 ? 'auto' : undefined
   };
 
-  const response = await fetchWithTimeout(url, {
+  const response = await fetchWithTimeout('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${providerConfig.api_key}`,
+      "Authorization": `Bearer ${VERTEX_API_KEY}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(body),
@@ -140,8 +142,11 @@ export async function runSwarm(messages, context, onUpdate) {
 
         if (toolName.startsWith('transfer_to_')) {
           const targetAgentName = toolName.replace('transfer_to_', '');
+
           activeAgent = AGENTS[targetAgentName === 'creator' ? 'image_video_creator' : targetAgentName];
+
           console.log(`Switching to agent: ${activeAgent.name}`);
+
           currentMessages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
@@ -149,8 +154,10 @@ export async function runSwarm(messages, context, onUpdate) {
           });
         } else {
           const tool = getTool(toolName);
+
           if (tool) {
             console.log(`Executing tool: ${toolName}`);
+
             if (onUpdate) {
               onUpdate({
                 type: 'tool_call_progress',
@@ -158,18 +165,25 @@ export async function runSwarm(messages, context, onUpdate) {
                 session_id: context.session_id,
                 update: `Executing ${toolName}`
               });
+
               onUpdate({ type: 'tool_start', tool: toolName, args });
             }
+
             try {
               if (context.abortSignal?.aborted) {
                 throw new Error('Request cancelled');
               }
+
               const result = await tool.execute(args, context);
+
+              console.log({ result })
+              
               currentMessages.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
                 content: result
               });
+
               if (onUpdate) {
                 onUpdate({
                   type: 'tool_call_progress',
@@ -177,14 +191,17 @@ export async function runSwarm(messages, context, onUpdate) {
                   session_id: context.session_id,
                   update: ''
                 });
+
                 onUpdate({ type: 'tool_end', tool: toolName, result });
               }
             } catch (error) {
+              console.log(`Failed execute tool ${toolName}: ${error.message}`)
               currentMessages.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
                 content: `Error: ${error.message}`
               });
+
               if (onUpdate) {
                 onUpdate({
                   type: 'tool_call_progress',

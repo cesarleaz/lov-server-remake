@@ -11,5 +11,8 @@ export const {
     BASE_API_URL = 'https://jaaz.app',
     CONFIG_PATH = path.join(USER_DATA_DIR, 'config.toml'),
     MONGODB_URI = 'mongodb://localhost:27017/localmanus',
-    SETTINGS_PATH = path.join(USER_DATA_DIR, 'settings.json')
+    SETTINGS_PATH = path.join(USER_DATA_DIR, 'settings.json'),
+
+    // Google Cloud
+    VERTEX_API_KEY,
 } = process.env

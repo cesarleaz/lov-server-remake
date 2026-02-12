@@ -1,13 +1,10 @@
 import mongoose from 'mongoose';
 
 const canvasSchema = new mongoose.Schema({
-  _id: {
-    type: String,
-    required: true
-  },
   name: {
     type: String,
-    required: true
+    required: true,
+    default: 'Untitled'
   },
   description: {
     type: String,

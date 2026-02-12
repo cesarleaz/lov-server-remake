@@ -5,7 +5,7 @@ import { BASE_API_URL, CONFIG_PATH as configFilePath, USER_DATA_DIR } from '../c
 
 export const FILES_DIR = path.join(USER_DATA_DIR, 'files');
 
-const DEFAULT_PROVIDERS_CONFIG = {
+export const DEFAULT_PROVIDERS_CONFIG = {
   jaaz: {
     models: {
       'gpt-4o': { type: 'text' },
@@ -38,13 +38,16 @@ const DEFAULT_PROVIDERS_CONFIG = {
     api_key: '',
     max_tokens: 8192,
   },
+  'nano-banana-pro': {
+    provider: 'google',
+    models: {
+      fast: '',
+      reasoning: ''
+    }
+  }
 };
 
-let appConfig = JSON.parse(JSON.stringify(DEFAULT_PROVIDERS_CONFIG));
-
-function getJaazUrl() {
-  return BASE_API_URL.replace(/\/$/, '') + '/api/v1/';
-}
+let appConfig = structuredClone(DEFAULT_PROVIDERS_CONFIG);
 
 export async function initialize() {
   try {
@@ -82,27 +85,17 @@ export async function initialize() {
       appConfig[provider].models = providerModels;
     }
 
-    if (appConfig.jaaz) {
-      appConfig.jaaz.url = getJaazUrl();
-    }
   } catch (e) {
     console.error(`Error loading config: ${e.message}`);
   }
 }
 
 export function getConfig() {
-  if (appConfig.jaaz) {
-    appConfig.jaaz.url = getJaazUrl();
-  }
   return appConfig;
 }
 
 export async function updateConfig(data) {
   try {
-    if (data.jaaz) {
-      data.jaaz.url = getJaazUrl();
-    }
-
     const dir = path.dirname(configFilePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });

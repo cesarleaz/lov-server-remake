@@ -1,11 +1,10 @@
-import 'dotenv/config';
+import './lib/db.js'
 import express from 'express';
 import { createServer } from 'http';
 import path from 'path';
 import fs from 'fs';
 import cors from 'cors';
 
-import { initDb } from './services/dbService.js';
 import { initialize as initConfig } from './services/configService.js';
 import { initialize as initTools } from './services/toolService.js';
 import { initWebSocket, broadcastInitDone } from './services/websocketService.js';
@@ -20,11 +19,13 @@ import workspaceRouter from './routes/workspaceRouter.js';
 import toolConfirmationRouter from './routes/toolConfirmationRouter.js';
 import sslRouter from './routes/sslRouter.js';
 import { PORT as port, UI_DIST_DIR as uiDistDir } from './constants.js';
+import morgan from 'morgan';
 
 const app = express();
 const httpServer = createServer(app);
 
 app.use(cors());
+app.use(morgan('dev'));
 app.use(express.json({ limit: '20mb' }));
 
 app.use('/api', rootRouter);
@@ -63,9 +64,8 @@ if (fs.existsSync(uiDistDir)) {
 }
 
 async function startServer() {
-  console.log('Starting LocalManus Express Server...');
+  console.log('Starting Express Server...');
 
-  await initDb();
   await initConfig();
   await initTools();
   initWebSocket(httpServer);

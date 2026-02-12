@@ -1,12 +1,10 @@
-import { getConfig } from './configService.js';
-import { getDb } from './dbService.js';
 import { writePlanTool } from '../tools/writePlan.js';
-import { generateImageByGptImage1Jaaz } from '../tools/generateImageJaaz.js';
+import { generateImage } from '../tools/generateImage.js';
 
 const tools = new Map();
 
 const TOOL_MAPPING = {
-  'generate_image_by_gpt_image_1_jaaz': generateImageByGptImage1Jaaz,
+  generate_image: generateImage,
 };
 
 export async function initialize() {
@@ -15,14 +13,10 @@ export async function initialize() {
   // Register system tools
   tools.set('write_plan', writePlanTool);
 
-  const config = getConfig();
-
-  // Logic to register tools based on config
+  // Lógica para registrar herramientas según configuración
   for (const [toolId, tool] of Object.entries(TOOL_MAPPING)) {
-    const providerConfig = config[tool.provider];
-    if (providerConfig && (tool.provider === 'comfyui' || providerConfig.api_key)) {
-      tools.set(toolId, tool);
-    }
+    // TODO: Aqui es donde se filtra las tools por las seleccionadas (modelos selecionados)
+    tools.set(toolId, tool);
   }
 }
 
