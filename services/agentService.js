@@ -38,7 +38,7 @@ const AGENTS = {
   image_video_creator: {
     name: 'image_video_creator',
     systemPrompt: CREATOR_SYSTEM_PROMPT,
-    tools: ['generate_image', 'transfer_to_planner']
+    tools: ['generate_image', 'generate_video', 'transfer_to_planner']
   }
 };
 
@@ -234,6 +234,17 @@ export async function runSwarm(messages, context, onUpdate) {
                   element: result.element,
                   file: result.file,
                   image_url: result.fileUrl,
+                });
+              }
+
+              if (toolName === 'generate_video' && result && result.videoUrl) {
+                onUpdate({
+                  type: 'video_generated',
+                  canvas_id: context.canvas_id,
+                  session_id: context.session_id,
+                  element: result.element,
+                  file: result.file,
+                  video_url: result.videoUrl,
                 });
               }
             } catch (error) {

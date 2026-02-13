@@ -1,10 +1,12 @@
 import { writePlanTool } from '../tools/writePlan.js';
 import { generateImage } from '../tools/generateImage.js';
+import { generateVideo } from '../tools/generateVideo.js';
 
 const tools = new Map();
 
 const TOOL_MAPPING = {
   generate_image: generateImage,
+  generate_video: generateVideo,
 };
 
 export async function initialize() {

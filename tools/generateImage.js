@@ -1,6 +1,7 @@
 import { VERTEX_API_KEY } from '../constants.js'
 import { saveFile } from '../lib/r2.js'
 import { fetchWithTimeout } from '../utils/httpUtils.js'
+import { saveImageToCanvas } from '../utils/imageCanvasUtils.js'
 
 export const generateImage = {
   name: 'generate_image',
@@ -85,28 +86,21 @@ export const generateImage = {
       const parts = data.candidates[0].content.parts
       const imagePart = parts.find((p) => p.inlineData)
 
-      // In a full implementation, we would download the image and save it to the canvas
       const { fileUrl } = await saveFile(imagePart.inlineData.data)
       const filename = fileUrl.split('/').pop()
 
       if (imagePart) {
+        const { element, file, imageUrl: canvasImageUrl } = await saveImageToCanvas(
+          context.canvas_id,
+          filename,
+          800,
+          600
+        )
+
         return {
-          fileUrl,
-          element: {
-            id: `img_${Date.now()}`,
-            type: 'image',
-            x: 100,
-            y: 100,
-            width: 800,
-            height: 600,
-            fileId: filename,
-          },
-          file: {
-            id: filename,
-            name: filename,
-            mimeType: 'image/png',
-            url: fileUrl,
-          }
+          fileUrl: canvasImageUrl,
+          element,
+          file,
         };
       }
     }
