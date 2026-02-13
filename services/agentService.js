@@ -90,7 +90,7 @@ async function callLLM(agent, messages, config) {
   ];
 
   const body = {
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3-pro-preview',
     messages: llmMessages,
     tools: agentTools.length > 0 ? agentTools : undefined,
     tool_choice: agentTools.length > 0 ? 'auto' : undefined
@@ -132,6 +132,13 @@ export async function runSwarm(messages, context, onUpdate) {
     currentMessages.push({ ...assistantMessage, role: 'assistant' });
 
     if (onUpdate) {
+      if (assistantMessage.content) {
+        onUpdate({ 
+          type: 'delta', 
+          text: assistantMessage.content 
+        });
+      }
+      
       onUpdate({ type: 'message', message: assistantMessage });
     }
 
@@ -155,10 +162,24 @@ export async function runSwarm(messages, context, onUpdate) {
         } else {
           const tool = getTool(toolName);
 
-          if (tool) {
+            if (tool) {
             console.log(`Executing tool: ${toolName}`);
 
             if (onUpdate) {
+              onUpdate({
+                type: 'tool_call',
+                id: toolCall.id,
+                name: toolName,
+                arguments: '{}'
+              });
+
+              if (toolName === 'generate_image') {
+                onUpdate({
+                  type: 'image_generation_start',
+                  message: 'Generating image...'
+                });
+              }
+
               onUpdate({
                 type: 'tool_call_progress',
                 tool_call_id: toolCall.id,
@@ -187,12 +208,22 @@ export async function runSwarm(messages, context, onUpdate) {
               if (onUpdate) {
                 onUpdate({
                   type: 'tool_call_progress',
-                  tool_call_id: toolCall.id,
                   session_id: context.session_id,
                   update: ''
                 });
 
+                onUpdate({ 
+                  type: 'tool_call_result', 
+                  id: toolCall.id,
+                  message: result 
+                });
+
                 onUpdate({ type: 'tool_end', tool: toolName, result });
+
+                onUpdate({
+                  type: 'all_messages',
+                  messages: currentMessages
+                });
               }
 
               if (toolName === 'generate_image' && result && result.fileUrl) {

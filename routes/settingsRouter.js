@@ -2,7 +2,7 @@ import express from 'express';
 import * as settingsService from '../services/settingsService.js';
 import * as dbService from '../services/dbService.js';
 import { initialize as initializeTools } from '../services/toolService.js';
-import { FILES_DIR } from '../services/configService.js';
+import { FILES_DIR } from '../constants.js';
 import fs from 'fs';
 import { z, validateBody, validateParams } from '../utils/validation.js';
 import { fetchWithTimeout } from '../utils/httpUtils.js';

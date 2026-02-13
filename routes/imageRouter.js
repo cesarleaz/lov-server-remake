@@ -3,7 +3,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
-import { FILES_DIR } from '../services/configService.js';
+import { FILES_DIR } from '../constants.js';
 import { fetchWithTimeout } from '../utils/httpUtils.js';
 import { z, validateBody, validateParams } from '../utils/validation.js';
 import { PORT } from '../constants.js';

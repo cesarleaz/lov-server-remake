@@ -1,9 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import toml from '@iarna/toml';
-import { BASE_API_URL, CONFIG_PATH as configFilePath, USER_DATA_DIR } from '../constants.js';
-
-export const FILES_DIR = path.join(USER_DATA_DIR, 'files');
+import { BASE_API_URL, CONFIG_PATH as configFilePath } from '../constants.js';
 
 export const DEFAULT_PROVIDERS_CONFIG = {
   jaaz: {
