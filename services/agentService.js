@@ -181,7 +181,7 @@ export async function runSwarm(messages, context, onUpdate) {
               currentMessages.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
-                content: result
+                content: typeof result === 'string' ? result : JSON.stringify(result)
               });
 
               if (onUpdate) {
@@ -193,6 +193,17 @@ export async function runSwarm(messages, context, onUpdate) {
                 });
 
                 onUpdate({ type: 'tool_end', tool: toolName, result });
+              }
+
+              if (toolName === 'generate_image' && result && result.fileUrl) {
+                onUpdate({
+                  type: 'image_generated',
+                  canvas_id: context.canvas_id,
+                  session_id: context.session_id,
+                  element: result.element,
+                  file: result.file,
+                  image_url: result.fileUrl,
+                });
               }
             } catch (error) {
               console.log(`Failed execute tool ${toolName}: ${error.message}`)

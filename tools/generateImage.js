@@ -87,9 +87,27 @@ export const generateImage = {
 
       // In a full implementation, we would download the image and save it to the canvas
       const { fileUrl } = await saveFile(imagePart.inlineData.data)
+      const filename = fileUrl.split('/').pop()
 
       if (imagePart) {
-        return `image generated successfully. URL: ${fileUrl}`
+        return {
+          fileUrl,
+          element: {
+            id: `img_${Date.now()}`,
+            type: 'image',
+            x: 100,
+            y: 100,
+            width: 800,
+            height: 600,
+            fileId: filename,
+          },
+          file: {
+            id: filename,
+            name: filename,
+            mimeType: 'image/png',
+            url: fileUrl,
+          }
+        };
       }
     }
 
